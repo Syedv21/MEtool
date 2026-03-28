@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>TechBridge Login</title>
+</head>
+<body class="bg-slate-950 flex items-center justify-center h-screen font-sans">
+    <div class="bg-slate-900 p-10 rounded-2xl border border-slate-800 shadow-2xl w-96">
+        <h1 class="text-emerald-500 font-black text-2xl italic mb-6">TECHBRIDGE <span class="text-slate-400 not-italic text-sm">PORTAL</span></h1>
+        <form action="/login" method="POST" class="space-y-6">
+            <div>
+                <label class="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Work Directory Path</label>
+                <input type="text" name="path" placeholder="e.g. User5/Maaz" required
+                    class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-emerald-400 outline-none focus:border-emerald-500 font-mono text-sm">
+            </div>
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-lg uppercase text-xs shadow-lg transition">
+                Login & Start
+            </button>
+        </form>
+    </div>
+</body>
+</html>
