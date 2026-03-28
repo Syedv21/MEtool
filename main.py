@@ -12,9 +12,11 @@ app.secret_key = "techbridge_secure_key_2026"  # Key for session management
 # Initialize OCR (Optimized for standard CPU)
 reader = easyocr.Reader(['en'], gpu=False)
 
-# --- CONFIGURATION ---
-# Matches your G: drive screenshot exactly
-DRIVE_ROOT = r"G:\My Drive\Mortgage_Production"
+# Use this for local testing on Windows
+# DRIVE_ROOT = r"G:\My Drive\Mortgage_Production"
+
+# Use this for Render / Linux Cloud Deployment
+DRIVE_ROOT = os.path.join(os.getcwd(), "Mortgage_Production")
 
 HEADERS = [
     "Record Number", "Lead ID", "Applicant First Name", "Applicant Last Name",
