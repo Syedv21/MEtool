@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>TechBridge | Para-Slide</title>
+    <style>
+        #imgPreview { transform-origin: 0 0; transition: transform 0.1s; display: block; max-width: 100%; }
+        #imgContainer { overflow: auto; background: #020617; height: 100%; border: 2px solid #1e293b; border-radius: 8px; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .record-card { transition: all 0.5s ease; width: 100%; max-width: 1000px; }
+        .fade-out { opacity: 0; transform: translateX(-50px) scale(0.95); pointer-events: none; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden">
+
+    <nav class="bg-slate-900 border-b border-slate-800 p-3 flex justify-between items-center shrink-0">
+    <h1 class="text-emerald-500 font-black tracking-tighter text-xl italic px-4">TECHBRIDGE <span class="text-slate-400 font-light">OCR</span></h1>
+    <div class="flex gap-6 items-center">
+        <a href="/history" class="text-slate-500 hover:text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] transition">
+            <i class="fa-solid fa-database mr-2"></i> Production History
+        </a>
+
+        <input type="file" id="fileInput" class="hidden" onchange="processImage()">
+        <button onclick="document.getElementById('fileInput').click()" class="bg-emerald-600 hover:bg-emerald-500 px-6 py-2 rounded-lg font-bold text-xs uppercase transition shadow-lg shadow-emerald-900/20">Upload Document</button>
+    </div>
+</nav>
+
+    <div class="h-[40%] p-4 bg-slate-900/50">
+        <div id="imgContainer" class="custom-scroll relative">
+            <img id="imgPreview" src="">
+            <div class="absolute top-4 right-4 flex flex-col gap-2">
+                <button onclick="zoom(0.2)" class="bg-slate-800/80 p-2 rounded border border-slate-700 hover:bg-slate-700"><i class="fa-solid fa-plus"></i></button>
+                <button onclick="zoom(-0.2)" class="bg-slate-800/80 p-2 rounded border border-slate-700 hover:bg-slate-700"><i class="fa-solid fa-minus"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="recordsList" class="flex-grow overflow-y-auto p-10 flex flex-col items-center gap-12 custom-scroll">
+        <div class="text-slate-700 font-bold uppercase tracking-[0.3em] text-sm mt-20">Awaiting Data Extraction...</div>
+    </div>
+
+    <script>
+        let scale = 1.0;
+        function zoom(amt) { scale = Math.max(0.1, scale + amt); document.getElementById('imgPreview').style.transform = `scale(${scale})`; }
+
+        async function processImage() {
+            const file = document.getElementById('fileInput').files[0];
+            if(!file) return;
+
+            document.getElementById('imgPreview').src = URL.createObjectURL(file);
+            const list = document.getElementById('recordsList');
+            list.innerHTML = `<div class="flex flex-col items-center animate-pulse"><div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div><p class="text-emerald-500 font-black text-xs uppercase tracking-widest">Parsing 35 Data Points...</p></div>`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                list.innerHTML = "";
+                data.records.forEach((para, i) => {
+
+                    // --- HEADER REMOVAL LOGIC ---
+                    // This splits by pipe, checks if parts exist, and removes the label half
+                    let cleanText = para;
+                    if (para.includes('|')) {
+                        const parts = para.split('|').map(p => p.trim());
+                        // If the text looks like "Label | Value | Label | Value" (70 parts for 35 fields)
+                        if (parts.length > 40) {
+                            cleanText = parts.filter((_, index) => index % 2 !== 0).join(' | ');
+                        }
+                    }
+
+                    const card = document.createElement('div');
+                    card.id = `record-${i}`;
+                    card.className = "record-card bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+                            <span class="text-emerald-500 font-black italic text-lg">RECORD #${i+1}</span>
+                            <div class="flex gap-4 items-center">
+                                <span class="text-[10px] text-slate-500 uppercase font-bold" id="counter-${i}">Analyzing...</span>
+                                <button onclick="saveAndNext(${i})" class="bg-emerald-600 hover:bg-emerald-500 px-8 py-2 rounded-lg font-black text-[10px] uppercase transition shadow-lg shadow-emerald-500/10">Save & Next</button>
+                            </div>
+                        </div>
+                        <textarea id="text-${i}" oninput="updateCounter(${i})" class="w-full h-48 bg-slate-950 p-4 rounded-lg border border-slate-800 text-emerald-400 font-mono text-sm leading-relaxed outline-none focus:border-emerald-500/50 transition resize-none" spellcheck="false">${cleanText}</textarea>
+                    `;
+                    list.appendChild(card);
+                    updateCounter(i);
+                });
+            } catch (e) {
+                list.innerHTML = `<div class="text-red-500 font-bold uppercase tracking-widest text-xs">Error: ${e}</div>`;
+            }
+        }
+
+        // Change this line in updateCounter to count correctly even if fields are empty
+function updateCounter(i) {
+    const text = document.getElementById(`text-${i}`).value;
+    // Split by pipe and trim each part, but DON'T filter out empties,
+    // because an empty field is still one of the 35 columns!
+    const parts = text.split('|');
+    const count = parts.length;
+
+    const el = document.getElementById(`counter-${i}`);
+    el.innerText = `${count}/35 FIELDS`;
+
+    // Visual feedback: Green if exactly 35, Amber if not
+    if (count === 35) {
+        el.className = "text-emerald-400 text-[10px] font-black";
+    } else {
+        el.className = "text-amber-500 text-[10px] font-black animate-pulse";
+    }
+}
+
+        async function saveAndNext(index) {
+            const card = document.getElementById(`record-${index}`);
+            const text = document.getElementById(`text-${index}`).value;
+
+            const res = await fetch('/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+
+            const result = await res.json();
+            if (result.status === "success") {
+                card.classList.add('fade-out');
+                setTimeout(() => {
+                    card.remove();
+                    const next = document.getElementById(`record-${index + 1}`);
+                    if (next) {
+                        next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else if(document.querySelectorAll('.record-card').length === 0) {
+                        document.getElementById('recordsList').innerHTML = `<div class="text-emerald-500 font-black text-xl italic uppercase tracking-widest py-20">Batch Complete</div>`;
+                    }
+                }, 500);
+            }
+        }
+    </script>
+</body>
+</html>
